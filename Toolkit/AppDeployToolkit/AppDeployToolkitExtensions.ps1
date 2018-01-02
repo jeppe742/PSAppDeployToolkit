@@ -72,7 +72,7 @@ Function Trigger-AppEvalCycle {
     Write-FunctionHeaderOrFooter -CmdletName ${CmdletName} -CmdletBoundParameters $PSBoundParameters -Header
     
     ## Specify the scheduled task configuration in XML format
-    [string]$taskRunDateTime = (((Get-Date).AddMinutes($Time)).ToUniversalTime()).ToString(“yyyy-MM-ddTHH:mm:ss.fffffffZ”)
+    [string]$taskRunDateTime = (((Get-Date).AddHours($Time)).ToUniversalTime()).ToString(“yyyy-MM-ddTHH:mm:ss.fffffffZ”)
     
     #specify the task scheduler executable
     [string] $execSchTasks = "$envWinDir\System32\schtasks.exe"
