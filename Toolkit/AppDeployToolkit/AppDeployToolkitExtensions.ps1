@@ -88,23 +88,23 @@ Function Trigger-AppEvalCycle {
     Write-Log -Message “Bypassing Function [${CmdletName}] [Mode: $deployMode].” -Source ${CmdletName}
     Return
     }
-    [string]$xmlTask =  @"
-    <?xml version="1.0" encoding="UTF-16"?>
-    <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
-      <RegistrationInfo/>
-      <Triggers>
-        <TimeTrigger id="1">
-          <StartBoundary>$taskRunDateTime</StartBoundary>
-          <Enabled>true</Enabled>
-        </TimeTrigger>
-      </Triggers>
-      <Principals>
+    [string]$xmlTask = @"
+<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo/>
+  <Triggers>
+    <TimeTrigger id="1">
+        <StartBoundary>$taskRunDateTime</StartBoundary>
+        <Enabled>true</Enabled>
+    </TimeTrigger>
+        </Triggers>
+    <Principals>
         <Principal id="Author">
-          <UserId>S-1-5-18</UserId>
-          <RunLevel>HighestAvailable</RunLevel>
+            <UserId>S-1-5-18</UserId>
+            <RunLevel>HighestAvailable</RunLevel>
         </Principal>
-      </Principals>
-      <Settings>
+    </Principals>
+    <Settings>
         <MultipleInstancesPolicy>StopExisting</MultipleInstancesPolicy>
         <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
         <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
@@ -112,8 +112,8 @@ Function Trigger-AppEvalCycle {
         <StartWhenAvailable>false</StartWhenAvailable>
         <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
         <IdleSettings>
-          <StopOnIdleEnd>false</StopOnIdleEnd>
-          <RestartOnIdle>false</RestartOnIdle>
+            <StopOnIdleEnd>false</StopOnIdleEnd>
+            <RestartOnIdle>false</RestartOnIdle>
         </IdleSettings>
         <AllowStartOnDemand>true</AllowStartOnDemand>
         <Enabled>true</Enabled>
@@ -122,18 +122,18 @@ Function Trigger-AppEvalCycle {
         <WakeToRun>false</WakeToRun>
         <ExecutionTimeLimit>PT72H</ExecutionTimeLimit>
         <Priority>7</Priority>
-      </Settings>
-      <Actions Context="Author">
+    </Settings>
+    <Actions Context="Author">
         <Exec id="StartPowerShellJob">
-          <Command>cmd</Command>
-          <Arguments>/c WMIC /namespace:\\root\ccm path sms_client CALL TriggerSchedule '{00000000-0000-0000-0000-000000000121}' /NOINTERACTIVE</Arguments>
+            <Command>cmd</Command>
+            <Arguments>/c WMIC /namespace:\\root\ccm path sms_client CALL TriggerSchedule '{00000000-0000-0000-0000-000000000121}' /NOINTERACTIVE</Arguments>
         </Exec>
         <Exec>
-          <Command>schtasks</Command>
-          <Arguments>/delete /tn $taskName /f</Arguments>
+            <Command>schtasks</Command>
+            <Arguments>/delete /tn $taskName /f</Arguments>
         </Exec>
-      </Actions>
-    </Task>
+    </Actions>
+</Task>
 "@
     
     #Export the xml to file
