@@ -8,7 +8,7 @@
 -->
 	<!--Configuration File Details-->
 	<Config_File>
-		<Config_Version>3.6.8</Config_Version>
+		<Config_Version>3.7.0</Config_Version>
 		<Config_Date>05/17/2017</Config_Date>
 	</Config_File>
 
@@ -85,6 +85,10 @@
 		<!-- Time in seconds after which to re-prompt the user to close applications in case they ignore the prompt or they cancel the application's save prompt. -->
 		<InstallationDeferTime>2</InstallationDeferTime>
 		<!-- Time in hours which the installation should be defered when the installation times out -->
+		<InstallationWelcomePrompt_AutoContinue>True</InstallationWelcomePrompt_AutoContinue>
+		<!-- [True/False] - Specify whether to re-enumerate running processes while displaying Show-InstallationWelcome and automatically continue the installation if the running processes were detected to be manually closed (unless deferral is available). -->
+		<InstallationWelcomePrompt_RunningProcessesInterval>2</InstallationWelcomePrompt_RunningProcessesInterval>
+		<!-- Time in seconds after which to re-enumerate running processes while displaying the Show-InstallationWelcome prompt with AutoContinue set to True. Default is 2 seconds. -->
 	</UI_Options>
 	<!--UI Options-->
 
