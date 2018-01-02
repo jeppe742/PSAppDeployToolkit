@@ -69,9 +69,9 @@ Param (
 [string]$appDeployMainScriptFriendlyName = 'App Deploy Toolkit Main'
 
 ## Variables: Script Info
-[version]$appDeployMainScriptVersion = [version]'3.6.10'
-[version]$appDeployMainScriptMinimumConfigVersion = [version]'3.6.8'
-[string]$appDeployMainScriptDate = '10/06/2017'
+[version]$appDeployMainScriptVersion = [version]'3.7.0'
+[version]$appDeployMainScriptMinimumConfigVersion = [version]'3.7.0'
+[string]$appDeployMainScriptDate = '01/01/2018'
 [hashtable]$appDeployMainScriptParameters = $PSBoundParameters
 
 ## Variables: Datetime and Culture
@@ -238,8 +238,8 @@ Else {
 }
 
 ## Variables: App Deploy Script Dependency Files
-[string]$appDeployLogoIcon = Join-Path -Path $scriptRoot -ChildPath 'AppDeployToolkitLogo.ico'
-[string]$appDeployLogoBanner = Join-Path -Path $scriptRoot -ChildPath 'AppDeployToolkitBanner.png'
+[string]$appDeployLogoIcon = Join-Path -Path $scriptRoot -ChildPath 'Icon.ico'
+[string]$appDeployLogoBanner = Join-Path -Path $scriptRoot -ChildPath 'Banner.png'
 [string]$appDeployConfigFile = Join-Path -Path $scriptRoot -ChildPath 'AppDeployToolkitConfig.xml'
 [string]$appDeployCustomTypesSourceCode = Join-Path -Path $scriptRoot -ChildPath 'AppDeployToolkitMain.cs'
 #  App Deploy Optional Extensions File
@@ -286,6 +286,8 @@ If (-not (Test-Path -LiteralPath $appDeployCustomTypesSourceCode -PathType 'Leaf
 [int32]$configInstallationPersistInterval = $xmlConfigUIOptions.InstallationPrompt_PersistInterval
 [int32]$configInstallationRestartPersistInterval = $xmlConfigUIOptions.InstallationRestartPrompt_PersistInterval
 [int32]$configInstallationPromptToSave = $xmlConfigUIOptions.InstallationPromptToSave_Timeout
+[boolean]$configInstallationWelcomePromptAutoContinue = [boolean]::Parse($xmlConfigUIOptions.InstallationWelcomePrompt_AutoContinue)
+[int32]$configInstallationWelcomePromptRunningProcessesInterval = $xmlConfigUIOptions.InstallationWelcomePrompt_RunningProcessesInterval
 #  Define ScriptBlock for Loading Message UI Language Options (default for English if no localization found)
 [scriptblock]$xmlLoadLocalizedUIMessages = {
 	#  If a user is logged on, then get primary UI language for logged on user (even if running in session 0)
@@ -1094,7 +1096,7 @@ Function Exit-Script {
 	ElseIf (-not $installSuccess) {
 		Write-Log -Message "$installName $deploymentTypeName completed with exit code [$exitcode]." -Source ${CmdletName}
 		If (($exitCode -eq $configInstallationUIExitCode) -or ($exitCode -eq $configInstallationDeferExitCode)) {
-			[string]$balloonText = "$deploymentTypeName $configBalloonTextFastRetry"
+			[string]$balloonText = "$deploymentTypeName $configBalloonTextFastRetry" -f $global:configInstallationDeferTime
 			If ($configShowBalloonNotifications) { Show-BalloonTip -BalloonTipIcon 'Warning' -BalloonTipText $balloonText }
 		}
 		Else {
@@ -4846,11 +4848,21 @@ Function Execute-ProcessAsUser {
 		If ($Wait) {
 			Write-Log -Message "Waiting for the process launched by the scheduled task [$schTaskName] to complete execution (this may take some time)..." -Source ${CmdletName}
 			Start-Sleep -Seconds 1
-			While ((($exeSchTasksResult = & $exeSchTasks /query /TN $schTaskName /V /FO CSV) | ConvertFrom-CSV | Select-Object -ExpandProperty 'Status' | Select-Object -First 1) -eq 'Running') {
-				Start-Sleep -Seconds 5
-			}
+			#Create com object for the task scheduler
+			$schedule = New-Object -com("Schedule.Service")
+            $schedule.Connect()
+            $task = $schedule.getFolder('\').getTasks(0)|where{$_.Name -eq "$schTaskName"}
+
+            #If the task exists, wait for it to finish
+            if($task){
+                While ($task.state -eq 4){
+                    Start-Sleep -Seconds 4
+                }
+            }
+            else{Write-Log -Message "Could not file task: $schTaskName" -Severity 3 -Source ${CmdletName}}
+
 			#  Get the exit code from the process launched by the scheduled task
-			[int32]$executeProcessAsUserExitCode = ($exeSchTasksResult = & $exeSchTasks /query /TN $schTaskName /V /FO CSV) | ConvertFrom-CSV | Select-Object -ExpandProperty 'Last Result' | Select-Object -First 1
+			[int32]$executeProcessAsUserExitCode = $task.LastTaskResult
 			Write-Log -Message "Exit code from process launched by scheduled task [$executeProcessAsUserExitCode]." -Source ${CmdletName}
 		}
 		
@@ -5455,8 +5467,10 @@ Function Get-RunningProcesses {
 #>
 	[CmdletBinding()]
 	Param (
-		[Parameter(Mandatory=$false)]
-		[psobject[]]$ProcessObjects
+		[Parameter(Mandatory=$true,Position=0)]
+		[psobject[]]$ProcessObjects,
+		[Parameter(Mandatory=$false,Position=1)]
+		[switch]$DisableLogging
 	)
 	
 	Begin {
@@ -5467,8 +5481,9 @@ Function Get-RunningProcesses {
 	Process {
 		If ($processObjects) {
 			[string]$runningAppsCheck = ($processObjects | ForEach-Object { $_.ProcessName }) -join ','
-			Write-Log -Message "Check for running application(s) [$runningAppsCheck]..." -Source ${CmdletName}
-			
+			If (-not($DisableLogging)) {
+				Write-Log -Message "Check for running application(s) [$runningAppsCheck]..." -Source ${CmdletName}
+			}
 			## Create an array of process names to search for
 			[string[]]$processNames = $processObjects | ForEach-Object { $_.ProcessName }
 			
@@ -5477,8 +5492,10 @@ Function Get-RunningProcesses {
 			
 			If ($runningProcesses) {
 				[string]$runningProcessList = ($runningProcesses | ForEach-Object { $_.ProcessName } | Select-Object -Unique) -join ','
-				Write-Log -Message "The following processes are running: [$runningProcessList]." -Source ${CmdletName}
-				Write-Log -Message 'Resolve process descriptions...' -Source ${CmdletName}
+				If (-not($DisableLogging)) {
+					Write-Log -Message "The following processes are running: [$runningProcessList]." -Source ${CmdletName}
+					Write-Log -Message 'Resolve process descriptions...' -Source ${CmdletName}
+				}
 				## Resolve the running process names to descriptions
 				ForEach ($runningProcess in $runningProcesses) {
 					ForEach ($processObject in $processObjects) {
@@ -5500,10 +5517,10 @@ Function Get-RunningProcesses {
 				}
 			}
 			Else {
-				Write-Log -Message 'Application(s) are not running.' -Source ${CmdletName}
-			}
-			
-			Write-Log -Message 'Finished checking running application(s).' -Source ${CmdletName}
+ 				If (-not($DisableLogging)) {
+					Write-Log -Message 'Application(s) are not running.' -Source ${CmdletName}
+				}
+			}			
 			Write-Output -InputObject $runningProcesses
 		}
 	}
@@ -5905,7 +5922,10 @@ Function Show-InstallationWelcome {
 						}
 						Catch { }
 					}
-					
+
+					#Create a scheduled task to rerun the Application Evaluation Cycle
+					Trigger-AppEvalCycle -Time $global:configInstallationDeferTime
+
 					#  Restore minimized windows
 					$null = $shellApp.UndoMinimizeAll()
 					
@@ -5918,6 +5938,9 @@ Function Show-InstallationWelcome {
 					
 					Set-DeferHistory -DeferTimesRemaining $DeferTimes -DeferDeadline $deferDeadlineUniversal
 					
+					#Create a scheduled task to rerun the Application Evaluation Cycle
+                    Trigger-AppEvalCycle -Time $global:configInstallationDeferTime				
+
 					#  Restore minimized windows
 					$null = $shellApp.UndoMinimizeAll()
 					
@@ -6065,7 +6088,9 @@ Function Show-WelcomePrompt {
 		[ValidateNotNullorEmpty()]
 		[int32]$ForceCountdown = 0,
 		[Parameter(Mandatory=$false)]
-		[switch]$CustomText = $false
+		[switch]$CustomText = $false,
+		[Parameter(Mandatory=$false)]
+		[boolean]$showContinue = $false
 	)
 	
 	Begin {
@@ -6140,6 +6165,7 @@ Function Show-WelcomePrompt {
 		$buttonDefer = New-Object -TypeName 'System.Windows.Forms.Button'
 		$buttonCloseApps = New-Object -TypeName 'System.Windows.Forms.Button'
 		$buttonAbort = New-Object -TypeName 'System.Windows.Forms.Button'
+		$dropdownDefer = New-Object -TypeName "System.Windows.Forms.Combobox"
 		$formWelcomeWindowState = New-Object -TypeName 'System.Windows.Forms.FormWindowState'
 		$flowLayoutPanel = New-Object -TypeName 'System.Windows.Forms.FlowLayoutPanel'
 		$panelButtons = New-Object -TypeName 'System.Windows.Forms.Panel'
@@ -6156,6 +6182,7 @@ Function Show-WelcomePrompt {
 				$buttonAbort.remove_Click($buttonAbort_OnClick)
 				$script:welcomeTimer.remove_Tick($timer_Tick)
 				$timerPersist.remove_Tick($timerPersist_Tick)
+				$timerRunningProcesses.remove_Tick($timerRunningProcesses_Tick)
 				$formWelcome.remove_Load($Form_StateCorrection_Load)
 				$formWelcome.remove_FormClosed($Form_Cleanup_FormClosed)
 			}
@@ -6233,11 +6260,22 @@ Function Show-WelcomePrompt {
 		If ($persistWindow) {
 			$timerPersist = New-Object -TypeName 'System.Windows.Forms.Timer'
 			$timerPersist.Interval = ($configInstallationPersistInterval * 1000)
-			[scriptblock]$timerPersist_Tick = { Refresh-InstallationWelcome }
+			[scriptblock]$timerPersist_Tick = { Update-InstallationWelcome }
 			$timerPersist.add_Tick($timerPersist_Tick)
 			$timerPersist.Start()
 		}
-		
+
+		## Process Re-Enumeration Timer
+		If ($ProcessDescriptions) {
+			If ($configInstallationWelcomePromptAutoContinue) {                
+				$timerRunningProcesses = New-Object -TypeName 'System.Windows.Forms.Timer'
+				$timerRunningProcesses.Interval = ($configInstallationWelcomePromptRunningProcessesInterval * 1000)
+				[scriptblock]$timerRunningProcesses_Tick = { Invoke-GetRunningProcesses }
+				$timerRunningProcesses.add_Tick($timerRunningProcesses_Tick)
+				$timerRunningProcesses.Start()
+			}
+		}
+
 		## Form
 		$formWelcome.Controls.Add($pictureBanner)
 		$formWelcome.Controls.Add($buttonAbort)
@@ -6424,6 +6462,21 @@ Function Show-WelcomePrompt {
 		$buttonDefer.UseVisualStyleBackColor = $true
 		$buttonDefer.add_Click($buttonDefer_OnClick)
 		
+		## Defer dropdown
+        $dropdownDefer.Location = '325,0'
+		$dropdownDefer.Name = 'buttonContinue'
+		$dropdownDefer.Size = $buttonSize
+		$dropdownDefer.TabIndex = 7
+		$dropdownDefer.AutoSize = $true
+		$dropdownDefer.DropDownHeight = 200
+		$dropdownDefer.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+		
+		#Add options to the dropdown
+        $dropdownDefer.Items.Add("1 time")|out-null
+		$dropdownDefer.Items.Add("2 timer")|out-null
+		$dropdownDefer.Items.Add("4 timer")|out-null
+        $dropdownDefer.SelectedIndex=1
+
 		## Button Continue
 		$buttonContinue.DataBindings.DefaultDataSourceUpdateMode = 0
 		$buttonContinue.Location = '325,0'
@@ -6494,8 +6547,11 @@ Function Show-WelcomePrompt {
 		$padding.Right = 0
 		$panelButtons.Margin = $padding
 		If ($showCloseApps) { $panelButtons.Controls.Add($buttonCloseApps) }
-		If ($showDefer) { $panelButtons.Controls.Add($buttonDefer) }
-		$panelButtons.Controls.Add($buttonContinue)
+		If ($showDefer) { 
+			$panelButtons.Controls.Add($buttonDefer) 
+			$panelButtons.Controls.Add($dropdownDefer)
+		}
+		if($showContinue){ $panelButtons.Controls.Add($buttonContinue)}
 		
 		## Add the Buttons Panel to the form
 		$formWelcome.Controls.Add($panelButtons)
@@ -6507,12 +6563,19 @@ Function Show-WelcomePrompt {
 		#  Clean up the control events
 		$formWelcome.add_FormClosed($Form_Cleanup_FormClosed)
 		
-		Function Refresh-InstallationWelcome {
+		Function Update-InstallationWelcome {
 			$formWelcome.BringToFront()
 			$formWelcome.Location = "$($formWelcomeStartPosition.X),$($formWelcomeStartPosition.Y)"
 			$formWelcome.Refresh()
 		}
 		
+		Function Invoke-GetRunningProcesses {
+			If (-not (Get-RunningProcesses -ProcessObjects $processObjects -DisableLogging)) {
+				Write-Log -Message 'Previously detected running processes are no longer running. Auto Continuing.' -Source ${CmdletName}
+				$formWelcome.Dispose()
+			}
+		}
+
 		## Minimize all other windows
 		If ($minimizeWindows) { $null = $shellApp.MinimizeAll() }
 		
@@ -6522,7 +6585,10 @@ Function Show-WelcomePrompt {
 		
 		Switch ($result) {
 			OK { $result = 'Continue' }
-			No { $result = 'Defer' }
+			No { 
+                $result = 'Defer'
+                $global:configInstallationDeferTime = [int]::parse($dropdownDefer.SelectedItem[0])
+                }
 			Yes { $result = 'Close' }
 			Abort { $result = 'Timeout' }
 		}
@@ -8864,7 +8930,7 @@ Function Test-PowerPoint {
 				If ([Environment]::UserInteractive) {
 					#  Check if "POWERPNT" process has a window with a title that begins with "PowerPoint Slide Show"
 					#  There is a possiblity of a false positive if the PowerPoint filename starts with "PowerPoint Slide Show"
-					[psobject]$PowerPointWindow = Get-WindowTitle -WindowTitle '^PowerPoint Slide Show' | Where-Object { $_.ParentProcess -eq 'POWERPNT'} | Select-Object -First 1
+					[psobject]$PowerPointWindow = Get-WindowTitle -WindowTitle '^PowerPoint-diasshow' | Where-Object { $_.ParentProcess -eq 'POWERPNT'} | Select-Object -First 1
 					If ($PowerPointWindow) {
 						[nullable[boolean]]$IsPowerPointFullScreen = $true
 						Write-Log -Message 'Detected that PowerPoint process [POWERPNT] has a window with a title that beings with [PowerPoint Slide Show].' -Source ${CmdletName}
@@ -9590,6 +9656,11 @@ Function Test-ServiceExists {
 	Process {
 		Try {
 			$ServiceObject = Get-WmiObject -ComputerName $ComputerName -Class 'Win32_Service' -Filter "Name='$Name'" -ErrorAction 'Stop'
+			# If nothing is returned from Win32_Service, check Win32_BaseService
+			If (-not ($ServiceObject) ) { 
+				$ServiceObject = Get-WmiObject -ComputerName $ComputerName -Class 'Win32_BaseService' -Filter "Name='$Name'" -ErrorAction 'Stop' 
+			}
+
 			If ($ServiceObject) {
 				Write-Log -Message "Service [$Name] exists." -Source ${CmdletName}
 				If ($PassThru) { Write-Output -InputObject $ServiceObject } Else { Write-Output -InputObject $true }
@@ -10289,6 +10360,8 @@ If (-not ([Management.Automation.PSTypeName]'PSADT.UiAutomation').Type) {
 		#  If a console user exists, then that will be the active user session.
 		#  If no console user exists but users are logged in, such as on terminal servers, then the first logged-in non-console user that is either 'Active' or 'Connected' is the active user.
 		[psobject]$RunAsActiveUser = $LoggedOnUserSessions | Where-Object { $_.IsActiveUserSession }
+        # The IsLocalAdmin property erroneously returns $false, so use this method instead to set it $true where appropriate. 
+        $RunAsActiveUser.IsLocalAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
 	}
 }
 
