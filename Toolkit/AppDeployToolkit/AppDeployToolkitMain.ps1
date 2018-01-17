@@ -4716,6 +4716,17 @@ Function Execute-ProcessAsUser {
 			}
 		}
 		
+		#Temporary give the user access to the log folder
+		try{
+			Write-Log -Message "Giving temporary access to $configToolkitLogDir for $UserName" -Source ${cmdletName}
+			$acl=(get-item $configToolkitLogDir).getaccesscontrol("access")
+			$newAcl = New-Object System.Security.AccessControl.FileSystemAccessRule("$UserName","FullControl","allow")
+			$acl.SetAccessRule($newAcl)
+			Set-Acl $configToolkitLogDir $newAcl -ErrorAction 'Stop'
+		}
+		catch{
+			Write-Log -Message "Couldn't give temporary access to $configToolkitLogDir for $UserName" -source ${cmdletName} -Severity 3
+		}
 		## Build the scheduled task XML name
 		[string]$schTaskName = "$appDeployToolkitName-ExecuteAsUser"
 		
@@ -4873,6 +4884,18 @@ Function Execute-ProcessAsUser {
 		}
 		Catch {
 			Write-Log -Message "Failed to delete scheduled task [$schTaskName]. `n$(Resolve-Error)" -Severity 3 -Source ${CmdletName}
+		}
+		
+		#Remove the permissions from the log folder again
+		try{
+			Write-Log -Message "Giving temporary access to $configToolkitLogDir for $UserName" -source ${cmdletName}
+			$acl=(get-item $configToolkitLogDir).getaccesscontrol("access")
+			$newAcl = New-Object System.Security.AccessControl.FileSystemAccessRule("$UserName","FullControl","allow")
+			$acl.RemoveAccessRule($newAcl)
+			Set-Acl $configToolkitLogDir $newAcl -ErrorAction 'Stop'
+		}
+		catch{
+			Write-Log -Message "Couldn't give temporary access to $configToolkitLogDir for $UserName" -source ${cmdletName} -Severity 3
 		}
 	}
 	End {
