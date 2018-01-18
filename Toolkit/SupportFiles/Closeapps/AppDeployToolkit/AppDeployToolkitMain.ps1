@@ -8950,8 +8950,7 @@ Function Test-PowerPoint {
 				If ([Environment]::UserInteractive) {
 					#  Check if "POWERPNT" process has a window with a title that begins with "PowerPoint Slide Show"
 					#  There is a possiblity of a false positive if the PowerPoint filename starts with "PowerPoint Slide Show"
-					[psobject]$PowerPointWindow = Get-WindowTitle -WindowTitle '^PowerPoint-diasshow' | Where-Object { $_.ParentProcess -eq 'POWERPNT'} | Select-Object -First 1
-					If ($PowerPointWindow) {
+					[psobject]$PowerPointWindow = Get-WindowTitle -GetAllWindowTitles | Where { $_.WindowTitle -match '^PowerPoint Slide Show' -or $_.WindowTitle -match '^PowerPoint-' } | Where-Object { $_.ParentProcess -eq 'POWERPNT'} | Select-Object -First 1					If ($PowerPointWindow) {
 						[nullable[boolean]]$IsPowerPointFullScreen = $true
 						Write-Log -Message 'Detected that PowerPoint process [POWERPNT] has a window with a title that beings with [PowerPoint Slide Show].' -Source ${CmdletName}
 					}

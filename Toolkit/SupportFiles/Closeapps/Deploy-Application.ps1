@@ -118,10 +118,9 @@ Try {
 		[string]$installPhase = 'UserDialog'
 
 		#Check if a powerpoint presentation is open. In this case, defer the installation
-		#if(Test-PowerPoint){
-		#	Trigger-AppEvalCycle -Time $configInstallationDeferTime
-		#	Exit-Script -ExitCode $configInstallationDeferExitCode
-		#}
+		if(Test-PowerPoint){
+			Exit-Script -ExitCode $configInstallationDeferExitCode
+		}
 		#Show installation welcome, with the passed down parameters
 		Show-InstallationWelcome @welcomeParams
 
@@ -136,10 +135,9 @@ Try {
 		[string]$installPhase = 'UserDialog'
 		
 		#Check if a powerpoint presentation is open. In this case, defer the installation
-		#if(Test-PowerPoint){
-		#	Trigger-AppEvalCycle -Time $configInstallationDeferTime
-		#	Exit-Script -ExitCode $configInstallationDeferExitCode
-		#}
+		if(Test-PowerPoint){
+			Exit-Script -ExitCode $configInstallationDeferExitCode
+		}
 		#Show installation welcome, with the passed down parameters
 		Show-InstallationWelcome @welcomeParams
 
