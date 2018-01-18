@@ -426,8 +426,27 @@ Function Show-InstallationRestartPrompt {
             if(-not (Test-Path $dirTempSupportFiles)){New-Item $dirTempSupportFiles -ItemType Directory -Force}
             Copy-Item -Path "$dirSupportFiles\Reboot\*" -Destination $dirTempSupportFiles -Recurse -Force
             
+            $appOptions = @{
+                "appVendor" = $appVendor;
+                "appName" = $appName;
+                "appVersion" = $appVersion;
+                "appArch" = $appArch;
+                "appLang" = $appLang;
+                "appRevision" = $appRevision;
+                "appScriptVersion" = $appScriptVersion;
+                "appScriptDate" = $appScriptDate;
+                "appScriptAuthor" = $appScriptAuthor;
+            }
+            $appOptions|Export-Clixml "$dirTempSupportFiles\appOptions.xml"
+
+            $rebootOptions = @{
+                "CountdownSeconds" = $CountdownSeconds;
+                "CountdownNoHideSeconds" = $CountdownNoHideSeconds;
+                "NoCountdown" = $NoCountdown;
+            }
+            $rebootOptions|Export-Clixml "$dirTempSupportFiles\rebootOptions"
             #Start at scheduled task as the user
-            $ExitCode = Execute-ProcessAsUser -Path "$dirTempSupportFiles\Deploy-Application.EXE" -Parameters "-DeploymentType Install -DeployMode Interactive" -Wait -PassThru -RunLevel 'HighestAvailable'
+            $ExitCode = Execute-ProcessAsUser -Path "$dirTempSupportFiles\Deploy-Application.EXE" -Parameters "-DeploymentType Install -DeployMode Interactive" -PassThru -RunLevel 'HighestAvailable'
             
             #Clean up the temp files
             #Remove-Item $dirTempSupportFiles -Recurse -Force

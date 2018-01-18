@@ -10512,7 +10512,7 @@ If ($configToolkitCompressLogs) {
 . $RevertScriptLogging
 
 ## Initialize Logging
-$installPhase = 'Initialization UserDialog'
+$installPhase = 'Initialization RebootDialog'
 $scriptSeparator = '*' * 79
 Write-Log -Message ($scriptSeparator,$scriptSeparator) -Source $appDeployToolkitName
 Write-Log -Message "[$installName] setup started." -Source $appDeployToolkitName

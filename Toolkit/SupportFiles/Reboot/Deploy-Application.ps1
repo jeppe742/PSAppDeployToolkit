@@ -117,7 +117,7 @@ Try {
 		##*===============================================
 		##* POST-INSTALLATION
 		##*===============================================
-		[string]$installPhase = 'Post-Installation'
+		[string]$installPhase = 'RebootDialog'
 		
 
 		## Display a message at the end of the install
@@ -131,7 +131,7 @@ Try {
 		##*===============================================
 		##* POST-UNINSTALLATION
 		##*===============================================
-		[string]$installPhase = 'Post-Uninstallation'
+		[string]$installPhase = 'RebootDialog'
 		
 		#If the package requires a reboot, let the user know
 		Show-InstallationRestartPrompt @rebootOptions
