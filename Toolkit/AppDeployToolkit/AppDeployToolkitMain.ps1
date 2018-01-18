@@ -4720,9 +4720,11 @@ Function Execute-ProcessAsUser {
 		try{
 			Write-Log -Message "Giving temporary access to $configToolkitLogDir for $UserName" -Source ${cmdletName}
 			$acl=(get-item $configToolkitLogDir).getaccesscontrol("access")
-			$newAcl = New-Object System.Security.AccessControl.FileSystemAccessRule("$UserName","FullControl","allow")
+			$inheritFlag = @([system.Security.accesscontrol.InheritanceFlags]::ContainerInherit,[System.Security.AccessControl.InheritanceFlags]::ObjectInherit)
+			$propagationFlag = [System.Security.AccessControl.PropagationFlags]::None
+			$newAcl = New-Object System.Security.AccessControl.FileSystemAccessRule("$UserName",$inheritFlag,$propagationFlag,"FullControl","allow")
 			$acl.SetAccessRule($newAcl)
-			Set-Acl $configToolkitLogDir $newAcl -ErrorAction 'Stop'
+			Set-Acl $configToolkitLogDir $Acl -ErrorAction 'Stop'
 		}
 		catch{
 			Write-Log -Message "Couldn't give temporary access to $configToolkitLogDir for $UserName" -source ${cmdletName} -Severity 3
@@ -4890,9 +4892,12 @@ Function Execute-ProcessAsUser {
 		try{
 			Write-Log -Message "Giving temporary access to $configToolkitLogDir for $UserName" -source ${cmdletName}
 			$acl=(get-item $configToolkitLogDir).getaccesscontrol("access")
-			$newAcl = New-Object System.Security.AccessControl.FileSystemAccessRule("$UserName","FullControl","allow")
+			
+			$inheritFlag = @([system.Security.accesscontrol.InheritanceFlags]::ContainerInherit,[System.Security.AccessControl.InheritanceFlags]::ObjectInherit)
+			$propagationFlag = [System.Security.AccessControl.PropagationFlags]::None
+			$newAcl = New-Object System.Security.AccessControl.FileSystemAccessRule("$UserName",$inheritFlag,$propagationFlag,"FullControl","allow")
 			$acl.RemoveAccessRule($newAcl)
-			Set-Acl $configToolkitLogDir $newAcl -ErrorAction 'Stop'
+			Set-Acl $configToolkitLogDir $Acl -ErrorAction 'Stop'
 		}
 		catch{
 			Write-Log -Message "Couldn't give temporary access to $configToolkitLogDir for $UserName" -source ${cmdletName} -Severity 3

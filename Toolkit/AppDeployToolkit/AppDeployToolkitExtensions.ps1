@@ -349,7 +349,7 @@ Function Show-InstallationWelcome {
             if(Test-Path "$dirTempSupportFiles\result.xml"){
                 $results = Import-Clixml "$dirTempSupportFiles\result.xml"
                 $action = $results.action
-                $deferHours = $results.deferHours
+                $global:configInstallationDeferTime = $results.deferHours
                 $deferTimes = $results.deferTimes
                 $deferDeadlineUniversal = $results.deferDeadlineUniversal
 
@@ -364,7 +364,7 @@ Function Show-InstallationWelcome {
                 #Make sure defer or timeout was the action
                 if($action -eq 'defer' -or $action -eq 'timeout'){
                     #Create a scheduled task to run the app eval cycle
-                    Trigger-AppEvalCycle -Time $deferHours
+                    Trigger-AppEvalCycle -Time $global:configInstallationDeferTime
                     Exit-Script -ExitCode $configInstallationDeferExitCode
                 }
 
