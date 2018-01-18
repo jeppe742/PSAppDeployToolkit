@@ -114,11 +114,7 @@ Try {
 		##*===============================================
 		[string]$installPhase = 'Pre-Installation'
 
-		#Check if a powerpoint presentation is open. In this case, defer the installation
-		if(Test-PowerPoint){
-			Trigger-AppEvalCycle -Time $configInstallationDeferTime
-			Exit-Script -ExitCode $configInstallationDeferExitCode
-		}
+
 		#Show installation welcome, asking the user to close the running apps. This also blocks execution, if the user tries to open the apps during installation
 		Show-InstallationWelcome -CloseApps $Applist  -AllowDeferCloseApps -DeferTimes 30 -BlockExecution -PromptToSave -CheckDiskSpace
      
@@ -152,11 +148,7 @@ Try {
 		##*===============================================
 		[string]$installPhase = 'Pre-Uninstallation'
 		
-		#Check if a powerpoint presentation is open. In this case, defer the installation
-		if(Test-PowerPoint){
-			Trigger-AppEvalCycle -Time $configInstallationDeferTime
-			Exit-Script -ExitCode $configInstallationDeferExitCode
-		}
+
 		#Show installation welcome, asking the user to close the running apps. This also blocks execution, if the user tries to open the apps during installation
 		Show-InstallationWelcome -CloseApps $Applist  -AllowDeferCloseApps -DeferTimes 30 -BlockExecution -PromptToSave -CheckDiskSpace
 
