@@ -123,7 +123,7 @@ Try {
 		## Display a message at the end of the install
 		
 		#If the package requires a reboot, let the user know
-		Show-InstallationRestartPrompt @rebootOptions
+		Show-InstallationRestartPrompt @rebootParams
 	}
 	ElseIf ($deploymentType -ieq 'Uninstall')
 	{
@@ -134,7 +134,7 @@ Try {
 		[string]$installPhase = 'RebootDialog'
 		
 		#If the package requires a reboot, let the user know
-		Show-InstallationRestartPrompt @rebootOptions
+		Show-InstallationRestartPrompt @rebootParams
 		
 	}
 	

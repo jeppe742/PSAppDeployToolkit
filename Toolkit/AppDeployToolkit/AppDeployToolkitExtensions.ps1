@@ -343,6 +343,7 @@ Function Show-InstallationWelcome {
             }
             $appOptions|Export-Clixml "$dirTempSupportFiles\appOptions.xml"
             #Start at scheduled task as the user
+            Write-log -Message "Trying to show a welcome dialog to the user" -Source ${cmdletname}
             $ExitCode = Execute-ProcessAsUser -Path "$dirTempSupportFiles\Deploy-Application.EXE" -Parameters "-DeploymentType Install -DeployMode Interactive" -Wait -PassThru -RunLevel 'LeastPrivilege'
             
             #Get the result of the dialog
@@ -444,9 +445,10 @@ Function Show-InstallationRestartPrompt {
                 "CountdownNoHideSeconds" = $CountdownNoHideSeconds;
                 "NoCountdown" = $NoCountdown;
             }
-            $rebootOptions|Export-Clixml "$dirTempSupportFiles\rebootOptions"
+            $rebootOptions|Export-Clixml "$dirTempSupportFiles\rebootOptions.xml"
             #Start at scheduled task as the user
-            $ExitCode = Execute-ProcessAsUser -Path "$dirTempSupportFiles\Deploy-Application.EXE" -Parameters "-DeploymentType Install -DeployMode Interactive" -PassThru -RunLevel 'HighestAvailable'
+            Write-log -Message "Trying to show a reboot dialog to the user" -Source ${cmdletname}
+            $ExitCode = Execute-ProcessAsUser -Path "$dirTempSupportFiles\Deploy-Application.EXE" -Parameters "-DeploymentType Install -DeployMode Interactive" -wait -PassThru -RunLevel 'HighestAvailable'
             
             #Clean up the temp files
             #Remove-Item $dirTempSupportFiles -Recurse -Force
