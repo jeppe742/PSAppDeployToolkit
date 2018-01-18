@@ -59,19 +59,22 @@ Try {
 	
 	## Atea======= PACKAGE NAMING  ======= ======= ======= ======= ======= ======= =======
 	
-	[string]$appVendor = ''
-	[string]$appName = ''
-	[string]$appVersion = ''
-	[string]$appArch = 'x64'
-	[string]$appLang = 'DA'
-	[string]$appRevision = '01'
-	[string]$appScriptVersion = '1.0.0'
-	[string]$appScriptDate = '02/12/2017'
-	[string]$appScriptAuthor = '<author name>'
+	$appFileDir = $PSScriptRoot
+	$appOptions = Import-Clixml "$appFileDir\appOptions.xml"
+	[string]$appVendor = $appOptions.appVendor
+	[string]$appName = $appOptions.appName
+	[string]$appVersion = $appOptions.appVersion
+	[string]$appArch = $appOptions.appArch
+	[string]$appLang = $appOptions.appLang
+	[string]$appRevision = $appOptions.appRevision
+	[string]$appScriptVersion = $appOptions.appScriptVersion
+	[string]$appScriptDate = $appOptions.appScriptDate
+	[string]$appScriptAuthor = $appOptions.appScriptAuthor
 	$ScriptGuid = ''
 
-	#List of applications that should be closed (NOTE! Do not Write file extensions!):
-	$Applist = "iexplorer,notepad"
+	#Load the options for dialog
+	$rebootParams = Import-Clixml "$appFileDir\rebootOptions.xml"
+
 	
 	##* Do not modify section below
 	#region DoNotModify
@@ -109,74 +112,29 @@ Try {
 	##*===============================================
 		
 	If ($deploymentType -ine 'Uninstall') {
-		##*===============================================
-		##* PRE-INSTALLATION
-		##*===============================================
-		[string]$installPhase = 'Pre-Installation'
 
-		#Check if a powerpoint presentation is open. In this case, defer the installation
-		if(Test-PowerPoint){
-			Trigger-AppEvalCycle -Time $configInstallationDeferTime
-			Exit-Script -ExitCode $configInstallationDeferExitCode
-		}
-		#Show installation welcome, asking the user to close the running apps. This also blocks execution, if the user tries to open the apps during installation
-		Show-InstallationWelcome -CloseApps $Applist  -AllowDeferCloseApps -DeferTimes 30 -BlockExecution -PromptToSave -CheckDiskSpace
-     
-
-		
-		##*===============================================
-		##* INSTALLATION 
-		##*===============================================
-		[string]$installPhase = 'Installation'
-		
 
 		##*===============================================
 		##* POST-INSTALLATION
 		##*===============================================
 		[string]$installPhase = 'Post-Installation'
 		
-		#Set registry guid if the installation was successfull
-		if($mainExitCode -eq 0){
-			Set-RegistryKey -Key "HKEY_LOCAL_MACHINE\SOFTWARE\Atea\Applications\$ScriptGuid"	
-		}
 
 		## Display a message at the end of the install
 		
-		#If the package requires a reboot, let the user know, by uncomming the line below
-		#Show-InstallationRestartPrompt -NoCount
+		#If the package requires a reboot, let the user know
+		Show-InstallationRestartPrompt @rebootOptions
 	}
 	ElseIf ($deploymentType -ieq 'Uninstall')
 	{
-		##*===============================================
-		##* PRE-UNINSTALLATION
-		##*===============================================
-		[string]$installPhase = 'Pre-Uninstallation'
-		
-		#Check if a powerpoint presentation is open. In this case, defer the installation
-		if(Test-PowerPoint){
-			Trigger-AppEvalCycle -Time $configInstallationDeferTime
-			Exit-Script -ExitCode $configInstallationDeferExitCode
-		}
-		#Show installation welcome, asking the user to close the running apps. This also blocks execution, if the user tries to open the apps during installation
-		Show-InstallationWelcome -CloseApps $Applist  -AllowDeferCloseApps -DeferTimes 30 -BlockExecution -PromptToSave -CheckDiskSpace
-
-
-		##*===============================================
-		##* UNINSTALLATION
-		##*===============================================
-		[string]$installPhase = 'Uninstallation'
-
-
-		Remove-RegistryKey -Key "HKEY_LOCAL_MACHINE\SOFTWARE\Atea\Applications\$ScriptGuid"
-				
-		
+	
 		##*===============================================
 		##* POST-UNINSTALLATION
 		##*===============================================
 		[string]$installPhase = 'Post-Uninstallation'
 		
-		## <Perform Post-Uninstallation tasks here>
-		
+		#If the package requires a reboot, let the user know
+		Show-InstallationRestartPrompt @rebootOptions
 		
 	}
 	

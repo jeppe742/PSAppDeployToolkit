@@ -141,7 +141,7 @@ Try {
 		#	Exit-Script -ExitCode $configInstallationDeferExitCode
 		#}
 		#Show installation welcome, with the passed down parameters
-		Show-InstallationWelcome -CloseApps $CloseApps -Silent:$Silent -CloseAppsCountdown $CloseAppsCountdown -ForceCloseAppsCountdown $ForceCloseAppsCountdown -PromptToSave:$PromptToSave -PersistPrompt:$PersistPrompt -AllowDefer:$AllowDefer -AllowDeferCloseApps:$AllowDeferCloseApps -DeferTimes $DeferTimes -DeferDays $DeferDays -DeferDeadline $DeferDeadline -CheckDiskSpace:$CheckDiskSpace -RequireDiskSpace $RequiredDiskSpace -MinimizeWindows $MinimizeWindows
+		Show-InstallationWelcome @welcomeParams
 
 
 	}

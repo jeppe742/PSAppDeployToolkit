@@ -4722,7 +4722,7 @@ Function Execute-ProcessAsUser {
 			$acl=(get-item $configToolkitLogDir).getaccesscontrol("access")
 			$inheritFlag = @([system.Security.accesscontrol.InheritanceFlags]::ContainerInherit,[System.Security.AccessControl.InheritanceFlags]::ObjectInherit)
 			$propagationFlag = [System.Security.AccessControl.PropagationFlags]::None
-			$newAcl = New-Object System.Security.AccessControl.FileSystemAccessRule("$UserName",$inheritFlag,$propagationFlag,"FullControl","allow")
+			$newAcl = New-Object System.Security.AccessControl.FileSystemAccessRule("$UserName","FullControl",$inheritFlag,$propagationFlag,"allow")
 			$acl.SetAccessRule($newAcl)
 			Set-Acl $configToolkitLogDir $Acl -ErrorAction 'Stop'
 		}
@@ -4849,6 +4849,7 @@ Function Execute-ProcessAsUser {
 			#  Delete Scheduled Task
 			Write-Log -Message 'Delete the scheduled task which did not trigger.' -Source ${CmdletName}
 			Execute-Process -Path $exeSchTasks -Parameters "/delete /tn $schTaskName /f" -WindowStyle 'Hidden' -CreateNoWindow -ContinueOnError $true
+			Remove-Item $xmlSchTaskFilePath -Force
 			If (-not $ContinueOnError) {
 				Throw "Failed to trigger scheduled task [$schTaskName]."
 			}
@@ -4883,6 +4884,7 @@ Function Execute-ProcessAsUser {
 		Try {
 			Write-Log -Message "Delete scheduled task [$schTaskName]." -Source ${CmdletName}
 			Execute-Process -Path $exeSchTasks -Parameters "/delete /tn $schTaskName /f" -WindowStyle 'Hidden' -CreateNoWindow -ErrorAction 'Stop'
+			Remove-Item $xmlSchTaskFilePath -Force
 		}
 		Catch {
 			Write-Log -Message "Failed to delete scheduled task [$schTaskName]. `n$(Resolve-Error)" -Severity 3 -Source ${CmdletName}
@@ -4890,12 +4892,12 @@ Function Execute-ProcessAsUser {
 		
 		#Remove the permissions from the log folder again
 		try{
-			Write-Log -Message "Giving temporary access to $configToolkitLogDir for $UserName" -source ${cmdletName}
+			Write-Log -Message "Removing temporary access to $configToolkitLogDir for $UserName" -source ${cmdletName}
 			$acl=(get-item $configToolkitLogDir).getaccesscontrol("access")
 			
 			$inheritFlag = @([system.Security.accesscontrol.InheritanceFlags]::ContainerInherit,[System.Security.AccessControl.InheritanceFlags]::ObjectInherit)
 			$propagationFlag = [System.Security.AccessControl.PropagationFlags]::None
-			$newAcl = New-Object System.Security.AccessControl.FileSystemAccessRule("$UserName",$inheritFlag,$propagationFlag,"FullControl","allow")
+			$newAcl = New-Object System.Security.AccessControl.FileSystemAccessRule("$UserName","FullControl",$inheritFlag,$propagationFlag,"allow")
 			$acl.RemoveAccessRule($newAcl)
 			Set-Acl $configToolkitLogDir $Acl -ErrorAction 'Stop'
 		}

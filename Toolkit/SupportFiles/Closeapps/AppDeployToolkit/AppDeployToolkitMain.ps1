@@ -1074,10 +1074,10 @@ Function Exit-Script {
 	If ($deployModeSilent) { [boolean]$configShowBalloonNotifications = $false }
 	
 	If ($installSuccess) {
-		If (Test-Path -LiteralPath $regKeyDeferHistory -ErrorAction 'SilentlyContinue') {
-			Write-Log -Message 'Remove deferral history...' -Source ${CmdletName}
-			Remove-RegistryKey -Key $regKeyDeferHistory -Recurse
-		}
+		#If (Test-Path -LiteralPath $regKeyDeferHistory -ErrorAction 'SilentlyContinue') {
+		#	Write-Log -Message 'Remove deferral history...' -Source ${CmdletName}
+		#	Remove-RegistryKey -Key $regKeyDeferHistory -Recurse
+		#}
 		
 		[string]$balloonText = "$deploymentTypeName $configBalloonTextComplete"
 		## Handle reboot prompts on successful script completion

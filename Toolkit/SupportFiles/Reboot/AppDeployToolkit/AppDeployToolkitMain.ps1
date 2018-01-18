@@ -1074,10 +1074,10 @@ Function Exit-Script {
 	If ($deployModeSilent) { [boolean]$configShowBalloonNotifications = $false }
 	
 	If ($installSuccess) {
-		If (Test-Path -LiteralPath $regKeyDeferHistory -ErrorAction 'SilentlyContinue') {
-			Write-Log -Message 'Remove deferral history...' -Source ${CmdletName}
-			Remove-RegistryKey -Key $regKeyDeferHistory -Recurse
-		}
+		#If (Test-Path -LiteralPath $regKeyDeferHistory -ErrorAction 'SilentlyContinue') {
+		#	Write-Log -Message 'Remove deferral history...' -Source ${CmdletName}
+		#	Remove-RegistryKey -Key $regKeyDeferHistory -Recurse
+		#}
 		
 		[string]$balloonText = "$deploymentTypeName $configBalloonTextComplete"
 		## Handle reboot prompts on successful script completion
@@ -5905,6 +5905,15 @@ Function Show-InstallationWelcome {
 						}
 					}
 					Start-Sleep -Seconds 2
+
+					#Save the results
+					$result = @{
+						"action" = "close";
+						"deferHours" = $global:configInstallationDeferTime;
+						"deferTimes" = $DeferTimes;
+						"deferDeadlineUniversal" = $deferDeadlineUniversal;
+					}
+					$result|Export-Clixml "$appFileDir\result.xml"
 				}
 				#  Stop the script (if not actioned before the timeout value)
 				ElseIf ($promptResult -eq 'Timeout') {
@@ -5912,7 +5921,7 @@ Function Show-InstallationWelcome {
 					$BlockExecution = $false
 					
 					If (($deferTimes) -or ($deferDeadlineUniversal)) {
-						Set-DeferHistory -DeferTimesRemaining $DeferTimes -DeferDeadline $deferDeadlineUniversal
+						#Set-DeferHistory -DeferTimesRemaining $DeferTimes -DeferDeadline $deferDeadlineUniversal
 					}
 					## Dispose the welcome prompt timer here because if we dispose it within the Show-WelcomePrompt function we risk resetting the timer and missing the specified timeout period
 					If ($script:welcomeTimer) {
@@ -5923,8 +5932,14 @@ Function Show-InstallationWelcome {
 						Catch { }
 					}
 
-					#Create a scheduled task to rerun the Application Evaluation Cycle
-					Trigger-AppEvalCycle -Time $global:configInstallationDeferTime
+
+					$result = @{
+						"action" = "timeout";
+						"deferHours" = $global:configInstallationDeferTime;
+						"deferTimes" = $DeferTimes;
+						"deferDeadlineUniversal" = $deferDeadlineUniversal;
+					}
+					$result|Export-Clixml "$appFileDir\result.xml"
 
 					#  Restore minimized windows
 					$null = $shellApp.UndoMinimizeAll()
@@ -5936,10 +5951,15 @@ Function Show-InstallationWelcome {
 					Write-Log -Message 'Installation deferred by the user.' -Source ${CmdletName}
 					$BlockExecution = $false
 					
-					Set-DeferHistory -DeferTimesRemaining $DeferTimes -DeferDeadline $deferDeadlineUniversal
+					#Set-DeferHistory -DeferTimesRemaining $DeferTimes -DeferDeadline $deferDeadlineUniversal
 					
-					#Create a scheduled task to rerun the Application Evaluation Cycle
-                    Trigger-AppEvalCycle -Time $global:configInstallationDeferTime				
+					$result = @{
+						"action" = "defer";
+						"deferHours" = $global:configInstallationDeferTime;
+						"deferTimes" = $DeferTimes;
+						"deferDeadlineUniversal" = $deferDeadlineUniversal;
+					}
+					$result|Export-Clixml "$appFileDir\result.xml"
 
 					#  Restore minimized windows
 					$null = $shellApp.UndoMinimizeAll()
@@ -10492,7 +10512,7 @@ If ($configToolkitCompressLogs) {
 . $RevertScriptLogging
 
 ## Initialize Logging
-$installPhase = 'Initialization'
+$installPhase = 'Initialization UserDialog'
 $scriptSeparator = '*' * 79
 Write-Log -Message ($scriptSeparator,$scriptSeparator) -Source $appDeployToolkitName
 Write-Log -Message "[$installName] setup started." -Source $appDeployToolkitName
