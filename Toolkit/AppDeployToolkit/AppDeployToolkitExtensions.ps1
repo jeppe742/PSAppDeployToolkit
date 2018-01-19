@@ -83,11 +83,6 @@ Function Trigger-AppEvalCycle {
     
     }
     Process {
-    ## Bypass if in NonInteractive mode
-    If ($deployModeNonInteractive) {
-    Write-Log -Message “Bypassing Function [${CmdletName}] [Mode: $deployMode].” -Source ${CmdletName}
-    Return
-    }
     [string]$xmlTask = @"
 <?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
@@ -370,6 +365,12 @@ Function Show-InstallationWelcome {
                 }
 
             }
+            #The exit code indicate that we should defer, but there hasn't been saved any information about why. 
+            #This would be the case of a active powerpoint presentation
+            if($ExitCode -eq $configInstallationDeferExitCode -or $ExitCode -eq $configInstallationUIExitCode){
+                Trigger-AppEvalCycle -Time $global:configInstallationDeferTime
+                Exit-Script -ExitCode $ExitCode
+            }
 
             #Clean up the temp files
             Remove-Item $dirTempSupportFiles -Recurse -Force
@@ -448,7 +449,7 @@ Function Show-InstallationRestartPrompt {
             $rebootOptions|Export-Clixml "$dirTempSupportFiles\rebootOptions.xml"
             #Start at scheduled task as the user
             Write-log -Message "Trying to show a reboot dialog to the user" -Source ${cmdletname}
-            $ExitCode = Execute-ProcessAsUser -Path "$dirTempSupportFiles\Deploy-Application.EXE" -Parameters "-DeploymentType Install -DeployMode Interactive" -wait -PassThru -RunLevel 'HighestAvailable'
+            $ExitCode = Execute-ProcessAsUser -Path "$dirTempSupportFiles\Deploy-Application.EXE" -Parameters "-DeploymentType Install -DeployMode Interactive" -wait -PassThru -RunLevel 'LeastPrivilege'
             
             #Clean up the temp files
             #Remove-Item $dirTempSupportFiles -Recurse -Force

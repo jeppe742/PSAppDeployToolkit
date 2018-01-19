@@ -132,9 +132,8 @@ Try {
 		[string]$installPhase = 'Post-Installation'
 		
 		#Set registry guid if the installation was successfull
-		if($mainExitCode -eq 0){
-			Set-RegistryKey -Key "HKEY_LOCAL_MACHINE\SOFTWARE\Atea\Applications\$ScriptGuid"	
-		}
+		Set-RegistryKey -Key "HKEY_LOCAL_MACHINE\SOFTWARE\Atea\Applications\$ScriptGuid"	
+
 
 		## Display a message at the end of the install
 		
