@@ -4723,7 +4723,7 @@ Function Execute-ProcessAsUser {
 			$inheritFlag = @([system.Security.accesscontrol.InheritanceFlags]::ContainerInherit,[System.Security.AccessControl.InheritanceFlags]::ObjectInherit)
 			$propagationFlag = [System.Security.AccessControl.PropagationFlags]::None
 			$newAcl = New-Object System.Security.AccessControl.FileSystemAccessRule("$UserName","FullControl",$inheritFlag,$propagationFlag,"allow")
-			$acl.SetAccessRule($newAcl)
+			$acl.SetAccessRule($newAcl) |out-null
 			Set-Acl $configToolkitLogDir $Acl -ErrorAction 'Stop'
 		}
 		catch{
@@ -4862,29 +4862,45 @@ Function Execute-ProcessAsUser {
 		If ($Wait) {
 			Write-Log -Message "Waiting for the process launched by the scheduled task [$schTaskName] to complete execution (this may take some time)..." -Source ${CmdletName}
 			Start-Sleep -Seconds 1
-			#Create com object for the task scheduler
-			$schedule = New-Object -com("Schedule.Service")
-            $schedule.Connect()
-            $task = $schedule.getFolder('\').getTasks(0)|where{$_.Name -eq "$schTaskName"}
-
-            #If the task exists, wait for it to finish
-            if($task){
-                While ($task.state -eq 4){
-                    Start-Sleep -Seconds 4
-                }
-            }
-            else{Write-Log -Message "Could not file task: $schTaskName" -Severity 3 -Source ${CmdletName}}
-
-			#  Get the exit code from the process launched by the scheduled task
-			[int32]$executeProcessAsUserExitCode = $task.LastTaskResult
+			#If on Windows Vista or higer, Windows Task Scheduler 2.0 is supported. 'Schedule.Service' ComObject output is UI language independent
+			If (([version]$envOSVersion).Major -gt 5) {
+				Try {
+					[__comobject]$ScheduleService = New-Object -ComObject 'Schedule.Service' -ErrorAction Stop
+					$ScheduleService.Connect()
+					$RootFolder = $ScheduleService.GetFolder('\')
+					$Task = $RootFolder.GetTask("$schTaskName")
+					# Task State(Status) 4 = 'Running'
+					While ($Task.State -eq 4) {
+						Start-Sleep -Seconds 5
+					}
+					#  Get the exit code from the process launched by the scheduled task
+					[int32]$executeProcessAsUserExitCode = $Task.LastTaskResult
+				}
+				Catch {
+					Write-Log -Message "Failed to retrieve information from Task Scheduler. `n$(Resolve-Error)" -Severity 3 -Source ${CmdletName}
+				}
+				Finally {
+					Try { $null = [Runtime.Interopservices.Marshal]::ReleaseComObject($ScheduleService) } Catch { }
+				}
+			}
+			#Windows Task Scheduler 1.0
+			Else {
+				While ((($exeSchTasksResult = & $exeSchTasks /query /TN $schTaskName /V /FO CSV) | ConvertFrom-CSV | Select-Object -ExpandProperty 'Status' | Select-Object -First 1) -eq 'Running') {
+					Start-Sleep -Seconds 5
+				}
+				#  Get the exit code from the process launched by the scheduled task
+				[int32]$executeProcessAsUserExitCode = ($exeSchTasksResult = & $exeSchTasks /query /TN $schTaskName /V /FO CSV) | ConvertFrom-CSV | Select-Object -ExpandProperty 'Last Result' | Select-Object -First 1
+			}
 			Write-Log -Message "Exit code from process launched by scheduled task [$executeProcessAsUserExitCode]." -Source ${CmdletName}
 		}
-		
+		Else {
+			Start-Sleep -Seconds 1
+		}		
 		## Delete scheduled task
 		Try {
 			Write-Log -Message "Delete scheduled task [$schTaskName]." -Source ${CmdletName}
 			Execute-Process -Path $exeSchTasks -Parameters "/delete /tn $schTaskName /f" -WindowStyle 'Hidden' -CreateNoWindow -ErrorAction 'Stop'
-			Remove-Item $xmlSchTaskFilePath -Force
+			Remove-Item $xmlSchTaskFilePath -Force -ErrorAction 'Stop'
 		}
 		Catch {
 			Write-Log -Message "Failed to delete scheduled task [$schTaskName]. `n$(Resolve-Error)" -Severity 3 -Source ${CmdletName}
@@ -4898,7 +4914,7 @@ Function Execute-ProcessAsUser {
 			$inheritFlag = @([system.Security.accesscontrol.InheritanceFlags]::ContainerInherit,[System.Security.AccessControl.InheritanceFlags]::ObjectInherit)
 			$propagationFlag = [System.Security.AccessControl.PropagationFlags]::None
 			$newAcl = New-Object System.Security.AccessControl.FileSystemAccessRule("$UserName","FullControl",$inheritFlag,$propagationFlag,"allow")
-			$acl.RemoveAccessRule($newAcl)
+			$acl.RemoveAccessRule($newAcl) |out-null
 			Set-Acl $configToolkitLogDir $Acl -ErrorAction 'Stop'
 		}
 		catch{
